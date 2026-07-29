@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner Gudang Rajawali</title>
+    <title>QR Scanner Gudang Tekstil - Pro</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- ZXing Library -->
@@ -15,7 +15,7 @@
         
         <!-- Header -->
         <div class="bg-blue-600 text-white p-4 rounded-xl shadow-md mb-4 text-center">
-            <h1 class="text-xl font-bold">QR Scanner Gudang Rajawali</h1>
+            <h1 class="text-xl font-bold">QR Scanner Gudang</h1>
             <p class="text-sm text-blue-100">Tekstil Inventory System</p>
         </div>
 
@@ -25,7 +25,7 @@
                 Nomor SO (Sales Order)
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                   id="noSo" type="text" placeholder="Masukkan No SO dulu ganteng..." oninput="saveDataState()">
+                   id="noSo" type="text" placeholder="Masukkan No SO dulu..." oninput="saveDataState()">
         </div>
 
         <!-- Area Kamera Scanner -->
@@ -80,10 +80,13 @@
             </div>
         </div>
 
-        <!-- Tombol Kirim ke WhatsApp -->
-        <div class="mb-2">
+        <!-- Tombol Aksi (Salin & Kirim WhatsApp) -->
+        <div class="space-y-2 mb-2">
+            <button onclick="copyToClipboard()" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center space-x-2 text-sm">
+                <span>Salin Teks (untuk Excel/Notepad)</span>
+            </button>
             <button onclick="sendToWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
-                <span>Kirim ke WhatsApp Admin</span>
+                <span>Kirim ke WhatsApp</span>
             </button>
         </div>
 
@@ -118,7 +121,8 @@
             localStorage.setItem('gudang_scanned_data', JSON.stringify(scannedData));
         }
 
-        function playBeep() {
+        // Suara Beep Normal (Sukses)
+        function playSuccessBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioCtx.createOscillator();
@@ -138,10 +142,32 @@
             }
         }
 
+        // Suara Beep Peringatan Duplikat (Nada ganda lebih tinggi)
+        function playDuplicateAlert() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(300, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.25);
+            } catch (e) {
+                console.log("Audio dibatasi browser");
+            }
+        }
+
         btnToggleCamera.addEventListener('click', () => {
             const noSo = document.getElementById('noSo').value.trim();
             if (!noSo) {
-                alert('Harap isi Nomor SO terlebih dahulu sebelum menyalakan kamera ganteng!');
+                alert('Harap isi Nomor SO terlebih dahulu sebelum menyalakan kamera!');
                 document.getElementById('noSo').focus();
                 return;
             }
@@ -163,14 +189,14 @@
 
             codeReader.decodeFromVideoDevice(undefined, 'video', (result, err) => {
                 if (result) {
-                    addBarcode(result.text);
+                    processScannedCode(result.text);
                 }
                 if (err && !(err instanceof ZXing.NotFoundException)) {
                     console.error(err);
                 }
             }).catch(err => {
                 console.error(err);
-                alert('Gagal mengakses kamera. Pastikan izin kamera diberikan ganteng.');
+                alert('Gagal mengakses kamera. Tersedia opsi input manual di bawah.');
                 stopScanner();
             });
         }
@@ -186,19 +212,26 @@
             btnToggleCamera.classList.replace('hover:bg-red-600', 'hover:bg-green-600');
         }
 
-        function addBarcode(code) {
+        // Proses kode yang masuk (Cek duplikat tanpa pop-up mengganggu)
+        function processScannedCode(code) {
             code = code.trim();
             if (!code) return;
 
             if (scannedData.includes(code)) {
-                return; // Lewati jika sudah ada (cegah duplikat)
+                // Peringatan non-blocking: Getar dua kali & suara khusus duplikat
+                playDuplicateAlert();
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+                return; 
             }
 
+            // Jika baru: Masukkan ke data & respons sukses
             scannedData.push(code);
             updateTable();
             saveDataState();
 
-            playBeep();
+            playSuccessBeep();
             if (navigator.vibrate) {
                 navigator.vibrate(100);
             }
@@ -216,11 +249,7 @@
             
             if (!code) return;
 
-            if (scannedData.includes(code)) {
-                alert('QR Code ini sudah ada dalam daftar!');
-            } else {
-                addBarcode(code);
-            }
+            processScannedCode(code);
             
             inputField.value = '';
             inputField.focus();
@@ -266,6 +295,33 @@
             });
         }
 
+        // Fungsi Salin Teks ke Clipboard
+        function copyToClipboard() {
+            const noSo = document.getElementById('noSo').value.trim();
+
+            if (!noSo) {
+                alert('Nomor SO masih kosong!');
+                document.getElementById('noSo').focus();
+                return;
+            }
+
+            if (scannedData.length === 0) {
+                alert('Belum ada data QR code yang di-scan!');
+                return;
+            }
+
+            let textToCopy = `No. SO: ${noSo}\n`;
+            scannedData.forEach((code) => {
+                textToCopy += `${code}\n`;
+            });
+
+            navigator.clipboard.writeText(textToCopy.trim()).then(() => {
+                alert('Berhasil disalin ke clipboard! Bisa langsung di-paste ke Excel atau Notepad.');
+            }).catch(err => {
+                alert('Gagal menyalin teks.');
+            });
+        }
+
         function sendToWhatsApp() {
             const noSo = document.getElementById('noSo').value.trim();
 
@@ -280,9 +336,7 @@
                 return;
             }
 
-            // Format pesan sesuai permintaan baru
             let message = `No. SO: ${noSo}\n`;
-            
             scannedData.forEach((code) => {
                 message += `${code}\n`;
             });
