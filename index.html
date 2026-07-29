@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Barcode Gudang Tekstil - Pro</title>
-    <!-- Tailwind CSS untuk styling yang rapi dan responsif -->
+    <title>QR Scanner Gudang Rajawali</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ZXing Library untuk Scanner Barcode via Kamera -->
+    <!-- ZXing Library -->
     <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body class="bg-gray-100 font-sans antialiased">
@@ -15,7 +15,7 @@
         
         <!-- Header -->
         <div class="bg-blue-600 text-white p-4 rounded-xl shadow-md mb-4 text-center">
-            <h1 class="text-xl font-bold">Scanner Barcode Gudang</h1>
+            <h1 class="text-xl font-bold">QR Scanner Gudang Rajawali</h1>
             <p class="text-sm text-blue-100">Tekstil Inventory System</p>
         </div>
 
@@ -25,13 +25,13 @@
                 Nomor SO (Sales Order)
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                   id="noSo" type="text" placeholder="Masukkan No SO dulu..." oninput="saveDataState()">
+                   id="noSo" type="text" placeholder="Masukkan No SO dulu ganteng..." oninput="saveDataState()">
         </div>
 
         <!-- Area Kamera Scanner -->
         <div class="bg-white p-4 rounded-xl shadow-md mb-4 relative">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-bold text-gray-700">Kamera Scanner</span>
+                <span class="text-sm font-bold text-gray-700">Kamera QR Scanner</span>
                 <button id="btnToggleCamera" class="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1 rounded font-semibold transition">
                     Mulai Kamera
                 </button>
@@ -40,11 +40,11 @@
             <div id="scanner-container" class="relative overflow-hidden rounded-lg bg-black h-52 flex items-center justify-center mb-3">
                 <video id="video" class="w-full h-full object-cover"></video>
                 <div id="camera-placeholder" class="absolute text-white text-sm text-center p-4">
-                    Kamera mati. Klik "Mulai Kamera" untuk scan barcode.
+                    Kamera mati. Klik "Mulai Kamera" untuk scan QR.
                 </div>
             </div>
 
-            <!-- Input Cadangan: Ketik Manual / Barcode Scanner Fisik (Bluetooth/OTG) -->
+            <!-- Input Cadangan: Ketik Manual / Scanner Fisik -->
             <div class="flex gap-2">
                 <input type="text" id="manualInput" placeholder="Ketik / Scan fisik di sini..." 
                        class="shadow-sm border rounded flex-grow py-1.5 px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -58,7 +58,7 @@
         <!-- Daftar Barcode yang Terkumpul -->
         <div class="bg-white p-4 rounded-xl shadow-md mb-4 flex-grow">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-bold text-gray-700">Barang Ter-scan (<span id="countScan">0</span>)</span>
+                <span class="text-sm font-bold text-gray-700">QR Ter-scan (<span id="countScan">0</span>)</span>
                 <button onclick="clearScans()" class="text-red-500 text-xs hover:underline">Reset Semua</button>
             </div>
             
@@ -67,13 +67,13 @@
                     <thead class="bg-gray-50 text-xs text-gray-600 sticky top-1">
                         <tr>
                             <th class="p-2 border-b">No</th>
-                            <th class="p-2 border-b">Barcode</th>
+                            <th class="p-2 border-b">Data QR Code</th>
                             <th class="p-2 border-b text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="scanTableBody" class="text-xs text-gray-700">
                         <tr>
-                            <td colspan="3" class="p-4 text-center text-gray-400">Belum ada barcode yang di-scan</td>
+                            <td colspan="3" class="p-4 text-center text-gray-400">Belum ada QR code yang di-scan</td>
                         </tr>
                     </tbody>
                 </table>
@@ -83,7 +83,7 @@
         <!-- Tombol Kirim ke WhatsApp -->
         <div class="mb-2">
             <button onclick="sendToWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
-                <span>Kirim ke WhatsApp</span>
+                <span>Kirim ke WhatsApp Admin</span>
             </button>
         </div>
 
@@ -99,7 +99,6 @@
         const videoElement = document.getElementById('video');
         const cameraPlaceholder = document.getElementById('camera-placeholder');
 
-        // Load data tersimpan saat pertama kali dibuka (Local Storage)
         window.addEventListener('DOMContentLoaded', () => {
             const savedSo = localStorage.getItem('gudang_no_so');
             const savedScans = localStorage.getItem('gudang_scanned_data');
@@ -113,14 +112,12 @@
             }
         });
 
-        // Simpan state ke Local Storage agar aman jika tertutup
         function saveDataState() {
             const noSo = document.getElementById('noSo').value.trim();
             localStorage.setItem('gudang_no_so', noSo);
             localStorage.setItem('gudang_scanned_data', JSON.stringify(scannedData));
         }
 
-        // Efek Suara Beep menggunakan Web Audio API
         function playBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -128,24 +125,23 @@
                 const gainNode = audioCtx.createGain();
 
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // Frekuensi suara (Hz)
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
 
                 oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15); // Durasi 150ms
+                oscillator.stop(audioCtx.currentTime + 0.15);
             } catch (e) {
-                console.log("Audio tidak didukung/dibatasi browser");
+                console.log("Audio dibatasi browser");
             }
         }
 
-        // Tombol Start/Stop Kamera
         btnToggleCamera.addEventListener('click', () => {
             const noSo = document.getElementById('noSo').value.trim();
             if (!noSo) {
-                alert('Harap isi Nomor SO terlebih dahulu sebelum menyalakan kamera!');
+                alert('Harap isi Nomor SO terlebih dahulu sebelum menyalakan kamera ganteng!');
                 document.getElementById('noSo').focus();
                 return;
             }
@@ -158,14 +154,13 @@
         });
 
         function startScanner() {
-            codeReader = new ZXing.BrowserBarcodeReader();
+            codeReader = new ZXing.BrowserQRCodeReader();
             cameraPlaceholder.style.display = 'none';
             isScanning = true;
             btnToggleCamera.textContent = 'Matikan Kamera';
             btnToggleCamera.classList.replace('bg-green-500', 'bg-red-500');
             btnToggleCamera.classList.replace('hover:bg-green-600', 'hover:bg-red-600');
 
-            // Memilih kamera belakang utama secara otomatis (environment facing)
             codeReader.decodeFromVideoDevice(undefined, 'video', (result, err) => {
                 if (result) {
                     addBarcode(result.text);
@@ -175,7 +170,7 @@
                 }
             }).catch(err => {
                 console.error(err);
-                alert('Gagal mengakses kamera. Pastikan izin kamera diberikan.');
+                alert('Gagal mengakses kamera. Pastikan izin kamera diberikan ganteng.');
                 stopScanner();
             });
         }
@@ -191,29 +186,24 @@
             btnToggleCamera.classList.replace('hover:bg-red-600', 'hover:bg-green-600');
         }
 
-        // Tambah hasil scan ke array & tabel
         function addBarcode(code) {
             code = code.trim();
             if (!code) return;
 
-            // Cek duplikat agar tidak ada barcode yang terinput dobel
             if (scannedData.includes(code)) {
-                // Opsional: Berikan getar peringatan atau biarkan diam
-                return; 
+                return; // Lewati jika sudah ada (cegah duplikat)
             }
 
             scannedData.push(code);
             updateTable();
             saveDataState();
 
-            // Konfirmasi Sukses: Suara Beep & Getar HP
             playBeep();
             if (navigator.vibrate) {
                 navigator.vibrate(100);
             }
         }
 
-        // Input Manual / Scanner Fisik (Enter)
         function handleManualInput(event) {
             if (event.key === 'Enter') {
                 addManualBarcode();
@@ -227,7 +217,7 @@
             if (!code) return;
 
             if (scannedData.includes(code)) {
-                alert('Barcode ini sudah ada dalam daftar!');
+                alert('QR Code ini sudah ada dalam daftar!');
             } else {
                 addBarcode(code);
             }
@@ -236,14 +226,12 @@
             inputField.focus();
         }
 
-        // Hapus item satuan
         function removeScan(index) {
             scannedData.splice(index, 1);
             updateTable();
             saveDataState();
         }
 
-        // Reset semua data scan
         function clearScans() {
             if (confirm('Yakin ingin menghapus semua daftar scan?')) {
                 scannedData = [];
@@ -252,7 +240,6 @@
             }
         }
 
-        // Update Tampilan Tabel
         function updateTable() {
             const tbody = document.getElementById('scanTableBody');
             const countScan = document.getElementById('countScan');
@@ -261,7 +248,7 @@
             tbody.innerHTML = '';
 
             if (scannedData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada barcode yang di-scan</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada QR code yang di-scan</td></tr>`;
                 return;
             }
 
@@ -279,7 +266,6 @@
             });
         }
 
-        // Kirim Data ke WhatsApp
         function sendToWhatsApp() {
             const noSo = document.getElementById('noSo').value.trim();
 
@@ -290,30 +276,23 @@
             }
 
             if (scannedData.length === 0) {
-                alert('Belum ada data barcode yang di-scan!');
+                alert('Belum ada data QR code yang di-scan!');
                 return;
             }
 
-            // Susun format pesan
-            let message = `*LAPORAN SCAN BARCODE GUDANG*\n`;
-            message += `-----------------------------------\n`;
-            message += `*No. SO:* ${noSo}\n`;
-            message += `*Total Item:* ${scannedData.length} roll/barang\n`;
-            message += `-----------------------------------\n`;
-            message += `*Daftar Barcode:*\n`;
+            // Format pesan sesuai permintaan baru
+            let message = `No. SO: ${noSo}\n`;
             
-            scannedData.forEach((code, index) => {
-                message += `${index + 1}. ${code}\n`;
+            scannedData.forEach((code) => {
+                message += `${code}\n`;
             });
 
-            // Encode pesan untuk URL WhatsApp
-            const encodedMessage = encodeURIComponent(message);
-            const phoneTarget = '628158830450'; // Format nomor internasional tanpa tanda +
+            const encodedMessage = encodeURIComponent(message.trim());
+            const phoneTarget = '628158830450';
             const whatsappUrl = `https://wa.me/${phoneTarget}?text=${encodedMessage}`;
 
-            // Buka WhatsApp
             window.open(whatsappUrl, '_blank');
         }
     </script>
 </body>
-              </html>
+</html>
