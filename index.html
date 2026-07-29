@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner Gudang Tekstil - Pro</title>
+    <title>QR Scanner Gudang Rajawali</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- ZXing Library -->
@@ -15,8 +15,8 @@
         
         <!-- Header -->
         <div class="bg-blue-600 text-white p-4 rounded-xl shadow-md mb-4 text-center">
-            <h1 class="text-xl font-bold">QR Scanner Gudang</h1>
-            <p class="text-sm text-blue-100">Tekstil Inventory System</p>
+            <h1 class="text-xl font-bold">QR Scanner Gudang Rajawali</h1>
+            <marquee><p class="text-sm text-blue-100">Tekstil Inventory System</p></marquee>
         </div>
 
         <!-- Form Input No SO -->
@@ -25,7 +25,7 @@
                 Nomor SO (Sales Order)
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                   id="noSo" type="text" placeholder="Masukkan No SO dulu..." oninput="saveDataState()">
+                   id="noSo" type="text" placeholder="Masukkan No SO dulu ganteng..." oninput="saveDataState()">
         </div>
 
         <!-- Area Kamera Scanner -->
@@ -83,10 +83,10 @@
         <!-- Tombol Aksi (Salin & Kirim WhatsApp) -->
         <div class="space-y-2 mb-2">
             <button onclick="copyToClipboard()" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center space-x-2 text-sm">
-                <span>Salin Teks (untuk Excel/Notepad)</span>
+                <span>Salin Semua Barcode</span>
             </button>
             <button onclick="sendToWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
-                <span>Kirim ke WhatsApp</span>
+                <span>Kirim ke WhatsApp Admin</span>
             </button>
         </div>
 
