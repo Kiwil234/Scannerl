@@ -6,9 +6,13 @@
     <title>QR Scanner Gudang Rajawali</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 (Untuk Alert Modern) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- ZXing Library -->
     <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
-    <!-- Custom CSS untuk Animasi Marquee Modern -->
+    
     <style>
         @keyframes marquee {
             0% { transform: translateX(100%); }
@@ -23,113 +27,208 @@
             overflow: hidden;
             width: 100%;
         }
+        .scan-flash {
+            animation: flashAnimation 0.3s ease-out;
+        }
+        @keyframes flashAnimation {
+            0% { background-color: rgba(255, 255, 255, 0.85); }
+            100% { background-color: rgba(255, 255, 255, 0); }
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans antialiased">
+<body class="bg-gray-100 font-sans antialiased text-gray-800">
 
     <div class="container mx-auto max-w-md p-4 min-h-screen flex flex-col justify-between">
         
-        <!-- Header -->
-        <div class="bg-blue-600 text-white p-4 rounded-xl shadow-md mb-4 text-center">
-            <h1 class="text-xl font-bold">QR Scanner Gudang Rajawali</h1>
-            <div class="marquee-container mt-1">
-                <p class="text-sm text-blue-100 animate-marquee">Semangat Kerjanyaaa 🤸💪🤸💪</p>
+        <!-- Header & Indikator Koneksi -->
+        <div>
+            <div class="flex justify-between items-center mb-1 px-1">
+                <span class="text-xs font-semibold text-gray-500">PT. Maravillosa Indah Pratama</span>
+                <span id="connectionBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Online
+                </span>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-600 text-white p-4 rounded-xl shadow-lg mb-4 text-center relative overflow-hidden">
+                <h1 class="text-xl font-bold tracking-wide flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked"></i> QR Scanner Rajawali
+                </h1>
+                <div class="marquee-container mt-2 bg-blue-900/40 rounded py-1">
+                    <p class="text-xs text-blue-100 animate-marquee font-medium">Tetap Semangat! Teliti sebelum di-submit 🤸💪🤸💪</p>
+                </div>
             </div>
         </div>
 
         <!-- Form Input No SO -->
-        <div class="bg-white p-4 rounded-xl shadow-md mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="noSo">
-                Nomor SO (Sales Order)
+        <div class="bg-white p-4 rounded-xl shadow-md mb-3 border border-gray-100">
+            <label class="block text-gray-700 text-sm font-bold mb-1.5" for="noSo">
+                <i class="fa-solid fa-file-invoice text-blue-600 mr-1"></i> Nomor SO (Sales Order)
             </label>
-            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                   id="noSo" type="text" placeholder="Masukkan No SO dulu ganteng..." oninput="saveDataState()">
+            <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition" 
+                   id="noSo" type="text" placeholder="Contoh: SO-6080" oninput="saveDataState()">
         </div>
 
         <!-- Area Kamera Scanner -->
-        <div class="bg-white p-4 rounded-xl shadow-md mb-4 relative">
+        <div class="bg-white p-4 rounded-xl shadow-md mb-3 border border-gray-100 relative">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-bold text-gray-700">Kamera QR Scanner</span>
-                <button id="btnToggleCamera" class="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1 rounded font-semibold transition">
-                    Mulai Kamera
-                </button>
+                <span class="text-sm font-bold text-gray-700"><i class="fa-solid fa-camera mr-1"></i> Kamera Scanner</span>
+                
+                <div class="flex gap-1.5">
+                    <!-- Tombol Senter / Flashlight -->
+                    <button id="btnToggleTorch" onclick="toggleTorch()" title="Nyalakan Lampu Senter" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold transition shadow-sm">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </button>
+                    <!-- Tombol Mulai Kamera -->
+                    <button id="btnToggleCamera" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition shadow-sm flex items-center gap-1">
+                        <i class="fa-solid fa-play"></i> Mulai
+                    </button>
+                </div>
             </div>
             
-            <div id="scanner-container" class="relative overflow-hidden rounded-lg bg-black h-52 flex items-center justify-center mb-3">
+            <div id="scanner-container" class="relative overflow-hidden rounded-lg bg-gray-900 h-52 flex items-center justify-center mb-3 shadow-inner">
                 <video id="video" class="w-full h-full object-cover"></video>
-                <div id="camera-placeholder" class="absolute text-white text-sm text-center p-4">
-                    Kamera mati. Klik "Mulai Kamera" untuk scan QR.
+                <div id="flash-overlay" class="absolute inset-0 pointer-events-none"></div>
+                <div id="camera-placeholder" class="absolute text-gray-400 text-xs text-center p-4">
+                    <i class="fa-solid fa-video-slash text-3xl mb-2"></i><br>
+                    Kamera mati. Klik "Mulai" atau pakaikan alat scan fisik.
                 </div>
             </div>
 
-            <!-- Input Cadangan: Ketik Manual / Scanner Fisik -->
+            <!-- Input Cadangan & Scan Foto Galeri -->
             <div class="flex gap-2">
-                <input type="text" id="manualInput" placeholder="Ketik / Scan fisik di sini..." 
-                       class="shadow-sm border rounded flex-grow py-1.5 px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <input type="text" id="manualInput" placeholder="Ketik / Scan alat fisik..." 
+                       class="shadow-sm border border-gray-300 rounded-lg flex-grow py-2 px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                        onkeypress="handleManualInput(event)">
-                <button onclick="addManualBarcode()" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded font-semibold transition">
-                    Tambah
+                <button onclick="addManualBarcode()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-plus"></i>
                 </button>
+                <!-- Tombol Upload File/Foto -->
+                <button onclick="document.getElementById('fileInput').click()" title="Scan dari Foto Galeri" class="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-image"></i>
+                </button>
+                <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="scanImageFile(event)">
             </div>
         </div>
 
-        <!-- Daftar Barcode yang Terkumpul -->
-        <div class="bg-white p-4 rounded-xl shadow-md mb-4 flex-grow">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-bold text-gray-700">QR Ter-scan (<span id="countScan">0</span>)</span>
-                <button onclick="clearScans()" class="text-red-500 text-xs hover:underline">Reset Semua</button>
+        <!-- Daftar Barcode Terkumpul & Tombol Riwayat -->
+        <div class="bg-white p-4 rounded-xl shadow-md mb-3 flex-grow border border-gray-100">
+            <div class="flex justify-between items-center mb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-gray-700">QR Ter-scan (<span id="countScan" class="text-blue-600">0</span>)</span>
+                </div>
+                <div class="flex gap-2">
+                    <!-- Tombol Buka Riwayat Catatan -->
+                    <button onclick="openHistoryModal()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 transition flex items-center gap-1">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Catatan SO
+                    </button>
+                    <!-- Tombol Reset -->
+                    <button onclick="clearScans()" class="text-red-500 hover:text-red-700 text-xs font-semibold bg-red-50 px-2 py-1 rounded-lg border border-red-200 transition">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
             </div>
             
-            <div class="overflow-y-auto max-h-40 border rounded border-gray-200">
+            <div class="overflow-y-auto max-h-44 border border-gray-200 rounded-lg shadow-inner bg-gray-50">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50 text-xs text-gray-600 sticky top-1">
+                    <thead class="bg-gray-200 text-[11px] text-gray-700 sticky top-0">
                         <tr>
-                            <th class="p-2 border-b">No</th>
-                            <th class="p-2 border-b">Data QR Code</th>
-                            <th class="p-2 border-b text-center">Aksi</th>
+                            <th class="p-2 border-b w-8 text-center">No</th>
+                            <th class="p-2 border-b">Data QR / Barcode</th>
+                            <th class="p-2 border-b w-16 text-center">Waktu</th>
+                            <th class="p-2 border-b w-10 text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="scanTableBody" class="text-xs text-gray-700">
+                    <tbody id="scanTableBody" class="text-xs text-gray-700 bg-white">
                         <tr>
-                            <td colspan="3" class="p-4 text-center text-gray-400">Belum ada QR code yang di-scan</td>
+                            <td colspan="4" class="p-6 text-center text-gray-400">
+                                <i class="fa-solid fa-box-open text-2xl mb-1"></i><br>Belum ada data di-scan
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Tombol Aksi (Salin & Kirim WhatsApp) -->
-        <div class="space-y-2 mb-2">
-            <button onclick="copyToClipboard()" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center space-x-2 text-sm">
-                <span>Salin Semua Barcode</span>
+        <!-- Tombol Aksi Utama -->
+        <div class="grid grid-cols-2 gap-2 mb-2">
+            <button onclick="copyToClipboard()" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2.5 px-2 rounded-xl shadow transition flex items-center justify-center gap-1.5 text-xs">
+                <i class="fa-solid fa-copy"></i> Salin Semua
             </button>
-            <button onclick="sendToWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
-                <span>Kirim ke WhatsApp Admin😎</span>
+            <button onclick="exportToCSV()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-2 rounded-xl shadow transition flex items-center justify-center gap-1.5 text-xs">
+                <i class="fa-solid fa-file-csv"></i> Export CSV
+            </button>
+            <button onclick="sendToWhatsApp()" class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm mt-1">
+                <i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke WhatsApp Admin
             </button>
         </div>
 
     </div>
 
+    <!-- MODAL CATATAN / RIWAYAT SO (SAVED HISTORY) -->
+    <div id="historyModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-indigo-600 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-box-archive"></i> Riwayat / Catatan SO
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-white/80 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="p-3 bg-gray-50 border-b">
+                <input type="text" id="searchHistory" oninput="renderHistory()" placeholder="Cari No. SO..." 
+                       class="w-full text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div id="historyListContainer" class="p-4 overflow-y-auto flex-grow space-y-3">
+                <!-- Daftar Riwayat dimasukkan via JavaScript -->
+            </div>
+
+            <div class="p-3 bg-gray-100 border-t flex justify-between items-center">
+                <button onclick="clearAllHistory()" class="text-xs text-red-600 hover:underline font-semibold">Hapus Semua Riwayat</button>
+                <button onclick="closeHistoryModal()" class="bg-gray-600 text-white text-xs px-4 py-2 rounded-lg font-bold">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Script Logika Program -->
     <script>
         let codeReader = null;
-        let scannedData = [];
+        let scannedData = []; // Array of object: { code: string, time: string }
         let isScanning = false;
+        let isTorchOn = false;
 
         const btnToggleCamera = document.getElementById('btnToggleCamera');
         const videoElement = document.getElementById('video');
         const cameraPlaceholder = document.getElementById('camera-placeholder');
+        const flashOverlay = document.getElementById('flash-overlay');
+
+        // Pantau Status Koneksi
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        function updateOnlineStatus() {
+            const badge = document.getElementById('connectionBadge');
+            if (navigator.onLine) {
+                badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold flex items-center gap-1";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Online`;
+            } else {
+                badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold flex items-center gap-1";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> Offline`;
+            }
+        }
 
         window.addEventListener('DOMContentLoaded', () => {
+            updateOnlineStatus();
             const savedSo = localStorage.getItem('gudang_no_so');
             const savedScans = localStorage.getItem('gudang_scanned_data');
 
-            if (savedSo) {
-                document.getElementById('noSo').value = savedSo;
-            }
+            if (savedSo) document.getElementById('noSo').value = savedSo;
             if (savedScans) {
-                scannedData = JSON.parse(savedScans);
-                updateTable();
+                try {
+                    const parsed = JSON.parse(savedScans);
+                    // Format terlama compatibility (jika sebelumnya simpan string murni)
+                    scannedData = parsed.map(item => typeof item === 'string' ? { code: item, time: 'Restored' } : item);
+                    updateTable();
+                } catch(e) {}
             }
         });
 
@@ -139,78 +238,97 @@
             localStorage.setItem('gudang_scanned_data', JSON.stringify(scannedData));
         }
 
-        // Suara Beep Normal (Sukses)
+        function triggerVisualFlash() {
+            flashOverlay.classList.remove('scan-flash');
+            void flashOverlay.offsetWidth;
+            flashOverlay.classList.add('scan-flash');
+        }
+
         function playSuccessBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
-
                 oscillator.type = 'sine';
                 oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.15);
-            } catch (e) {
-                console.log("Audio dibatasi browser");
-            }
+            } catch (e) {}
         }
 
-        // Suara Beep Peringatan Duplikat
         function playDuplicateAlert() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
-
                 oscillator.type = 'sawtooth';
                 oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
                 oscillator.frequency.setValueAtTime(300, audioCtx.currentTime + 0.1);
                 gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.25);
-            } catch (e) {
-                console.log("Audio dibatasi browser");
+            } catch (e) {}
+        }
+
+        // FUNGSI SENTER (TORCH)
+        async function toggleTorch() {
+            if (!isScanning || !videoElement.srcObject) {
+                Swal.fire({ icon: 'warning', title: 'Kamera Belum Aktif', text: 'Nyalakan kamera terlebih dahulu untuk mengaktifkan senter!' });
+                return;
+            }
+
+            try {
+                const stream = videoElement.srcObject;
+                const track = stream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+                if ('torch' in capabilities || capabilities.torch !== undefined) {
+                    isTorchOn = !isTorchOn;
+                    await track.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+                    const btnTorch = document.getElementById('btnToggleTorch');
+                    if (isTorchOn) {
+                        btnTorch.classList.replace('bg-amber-500', 'bg-yellow-400');
+                        btnTorch.classList.add('text-gray-900');
+                    } else {
+                        btnTorch.classList.replace('bg-yellow-400', 'bg-amber-500');
+                        btnTorch.classList.remove('text-gray-900');
+                    }
+                } else {
+                    Swal.fire({ icon: 'info', title: 'Senter Tidak Didukung', text: 'Browser/Hardware kamera HP Anda tidak mengizinkan akses lampu secara otomatis.' });
+                }
+            } catch (err) {
+                console.error("Gagal ubah status senter:", err);
+                Swal.fire({ icon: 'error', title: 'Gagal Senter', text: 'Perangkat tidak merespon kontrol lampu.' });
             }
         }
 
         btnToggleCamera.addEventListener('click', () => {
             const noSo = document.getElementById('noSo').value.trim();
             if (!noSo) {
-                alert('Harap isi Nomor SO terlebih dahulu sebelum menyalakan kamera!');
+                Swal.fire({ icon: 'warning', title: 'No SO Kosong', text: 'Harap isi Nomor SO terlebih dahulu!' });
                 document.getElementById('noSo').focus();
                 return;
             }
 
-            if (!isScanning) {
-                startScanner();
-            } else {
-                stopScanner();
-            }
+            if (!isScanning) startScanner(); else stopScanner();
         });
 
-        // Modifikasi Start Scanner untuk Memprioritaskan Kamera Belakang (Rear Camera)
         async function startScanner() {
             codeReader = new ZXing.BrowserQRCodeReader();
             cameraPlaceholder.style.display = 'none';
             isScanning = true;
-            btnToggleCamera.textContent = 'Matikan Kamera';
-            btnToggleCamera.classList.replace('bg-green-500', 'bg-red-500');
-            btnToggleCamera.classList.replace('hover:bg-green-600', 'hover:bg-red-600');
+            btnToggleCamera.innerHTML = '<i class="fa-solid fa-stop"></i> Matikan';
+            btnToggleCamera.classList.replace('bg-green-600', 'bg-red-600');
+            btnToggleCamera.classList.replace('hover:bg-green-700', 'hover:bg-red-700');
 
             try {
                 const videoInputDevices = await codeReader.listVideoInputDevices();
-                
-                // Cari kamera belakang (biasanya memiliki label 'back', 'rear', 'environment')
-                let selectedDeviceId = videoInputDevices[0]?.deviceId; // Default ke kamera pertama
+                let selectedDeviceId = videoInputDevices[0]?.deviceId;
                 for (let device of videoInputDevices) {
                     if (/back|rear|environment/i.test(device.label)) {
                         selectedDeviceId = device.deviceId;
@@ -219,67 +337,89 @@
                 }
 
                 codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
-                    if (result) {
-                        processScannedCode(result.text);
-                    }
-                    if (err && !(err instanceof ZXing.NotFoundException)) {
-                        console.error(err);
-                    }
+                    if (result) processScannedCode(result.text);
                 });
             } catch (err) {
                 console.error(err);
-                alert('Gagal mengakses kamera. Tersedia opsi input manual di bawah.');
+                Swal.fire({ icon: 'error', title: 'Kamera Gagal', text: 'Akses kamera gagal. Gunakan input manual atau upload foto.' });
                 stopScanner();
             }
         }
 
         function stopScanner() {
-            if (codeReader) {
-                codeReader.reset();
-            }
+            if (codeReader) codeReader.reset();
             isScanning = false;
+            isTorchOn = false;
             cameraPlaceholder.style.display = 'block';
-            btnToggleCamera.textContent = 'Mulai Kamera';
-            btnToggleCamera.classList.replace('bg-red-500', 'bg-green-500');
-            btnToggleCamera.classList.replace('hover:bg-red-600', 'hover:bg-green-600');
+            btnToggleCamera.innerHTML = '<i class="fa-solid fa-play"></i> Mulai';
+            btnToggleCamera.classList.replace('bg-red-600', 'bg-green-600');
+            btnToggleCamera.classList.replace('hover:bg-red-700', 'hover:bg-green-700');
+            
+            const btnTorch = document.getElementById('btnToggleTorch');
+            btnTorch.classList.replace('bg-yellow-400', 'bg-amber-500');
+            btnTorch.classList.remove('text-gray-900');
         }
 
         function processScannedCode(code) {
             code = code.trim();
             if (!code) return;
 
-            if (scannedData.includes(code)) {
+            // Cek Duplikat
+            if (scannedData.some(item => item.code === code)) {
                 playDuplicateAlert();
-                if (navigator.vibrate) {
-                    navigator.vibrate([100, 50, 100]);
-                }
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'Data Duplikat!', showConfirmButton: false, timer: 1500 });
                 return; 
             }
 
-            scannedData.push(code);
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            scannedData.push({ code: code, time: timeStr });
             updateTable();
             saveDataState();
 
+            triggerVisualFlash();
             playSuccessBeep();
-            if (navigator.vibrate) {
-                navigator.vibrate(100);
-            }
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+
+        // SCAN DARI GORIS / GALERI (SOLUSI JIKA RUANGAN GELAP)
+        async function scanImageFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = async () => {
+                    try {
+                        const tempReader = new ZXing.BrowserQRCodeReader();
+                        const result = await tempReader.decodeFromImageElement(img);
+                        if (result) {
+                            processScannedCode(result.text);
+                            Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'QR Foto Berhasil Di-scan', showConfirmButton: false, timer: 1500 });
+                        }
+                    } catch (err) {
+                        Swal.fire({ icon: 'error', title: 'Gagal Scan Foto', text: 'QR/Barcode pada gambar tidak terbaca.' });
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
         }
 
         function handleManualInput(event) {
-            if (event.key === 'Enter') {
-                addManualBarcode();
-            }
+            if (event.key === 'Enter') addManualBarcode();
         }
 
         function addManualBarcode() {
             const inputField = document.getElementById('manualInput');
             const code = inputField.value.trim();
-            
             if (!code) return;
 
             processScannedCode(code);
-            
             inputField.value = '';
             inputField.focus();
         }
@@ -290,12 +430,52 @@
             saveDataState();
         }
 
-        function clearScans() {
-            if (confirm('Yakin ingin menghapus semua daftar scan?')) {
-                scannedData = [];
-                updateTable();
-                localStorage.removeItem('gudang_scanned_data');
+        // SIMPAN KE CATATAN BILA RESET ATAU SUBMIT
+        function saveToHistoryStorage() {
+            const noSo = document.getElementById('noSo').value.trim();
+            if (!noSo || scannedData.length === 0) return;
+
+            let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
+            
+            const record = {
+                id: Date.now(),
+                noSo: noSo,
+                date: new Date().toLocaleString('id-ID'),
+                total: scannedData.length,
+                items: [...scannedData]
+            };
+
+            // Jika SO yang sama sudah ada di riwayat, perbarui
+            const existingIndex = history.findIndex(h => h.noSo === noSo);
+            if (existingIndex >= 0) {
+                history[existingIndex] = record;
+            } else {
+                history.unshift(record); // Tambah paling atas
             }
+
+            localStorage.setItem('gudang_history_data', JSON.stringify(history));
+        }
+
+        function clearScans() {
+            if (scannedData.length === 0) return;
+            Swal.fire({
+                title: 'Reset & Simpan Catatan?',
+                text: "Data akan dibersihkan dari layar utama dan DISIMPAN ke Riwayat Catatan.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Reset & Simpan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    saveToHistoryStorage();
+                    scannedData = [];
+                    updateTable();
+                    localStorage.removeItem('gudang_scanned_data');
+                    Swal.fire({ icon: 'success', title: 'Tersimpan ke Catatan', text: 'Data lama tersimpan di tombol "Catatan SO".', timer: 1500, showConfirmButton: false });
+                }
+            });
         }
 
         function updateTable() {
@@ -306,18 +486,22 @@
             tbody.innerHTML = '';
 
             if (scannedData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada QR code yang di-scan</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-400"><i class="fa-solid fa-box-open text-2xl mb-1"></i><br>Belum ada data di-scan</td></tr>`;
                 return;
             }
 
-            scannedData.forEach((item, index) => {
+            [...scannedData].reverse().forEach((item, revIndex) => {
+                const index = scannedData.length - 1 - revIndex;
                 const row = document.createElement('tr');
-                row.className = 'border-b hover:bg-gray-50';
+                row.className = 'border-b hover:bg-blue-50 transition';
                 row.innerHTML = `
-                    <td class="p-2">${index + 1}</td>
-                    <td class="p-2 font-mono font-semibold">${item}</td>
+                    <td class="p-2 text-center font-semibold text-gray-500">${index + 1}</td>
+                    <td class="p-2 font-mono font-bold text-blue-700">${item.code}</td>
+                    <td class="p-2 text-center text-[10px] text-gray-400 font-mono">${item.time}</td>
                     <td class="p-2 text-center">
-                        <button onclick="removeScan(${index})" class="text-red-500 hover:text-red-700 font-bold">Hapus</button>
+                        <button onclick="removeScan(${index})" class="text-red-500 hover:text-red-700 bg-red-100 p-1 rounded transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -326,49 +510,44 @@
 
         function copyToClipboard() {
             const noSo = document.getElementById('noSo').value.trim();
-
-            if (!noSo) {
-                alert('Nomor SO masih kosong! kaya hati admin 😭');
-                document.getElementById('noSo').focus();
-                return;
-            }
-
-            if (scannedData.length === 0) {
-                alert('Belum ada data QR code yang di-scan!');
-                return;
-            }
+            if (!noSo) return Swal.fire('Perhatian', 'Nomor SO masih kosong!', 'warning');
+            if (scannedData.length === 0) return Swal.fire('Perhatian', 'Belum ada data QR code!', 'warning');
 
             let textToCopy = `No. SO: ${noSo}\n`;
-            scannedData.forEach((code) => {
-                textToCopy += `${code}\n`;
-            });
+            scannedData.forEach((item, i) => textToCopy += `${i+1}. ${item.code} (${item.time})\n`);
 
             navigator.clipboard.writeText(textToCopy.trim()).then(() => {
-                alert('Berhasil disalin ke clipboard! Bisa langsung di-paste ke Excel atau Notepad.');
-            }).catch(err => {
-                alert('Gagal menyalin teks.');
+                Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Disalin ke Clipboard', showConfirmButton: false, timer: 1500 });
             });
         }
 
-        // Tambahan Konfirmasi Setelah Kirim ke WhatsApp
+        function exportToCSV() {
+            const noSo = document.getElementById('noSo').value.trim();
+            if (!noSo) return Swal.fire('Perhatian', 'Nomor SO masih kosong!', 'warning');
+            if (scannedData.length === 0) return Swal.fire('Perhatian', 'Belum ada data untuk di-export!', 'warning');
+
+            let csvContent = "data:text/csv;charset=utf-8,No,No_SO,Barcode,Waktu_Scan\n";
+            scannedData.forEach((item, i) => { csvContent += `${i + 1},${noSo},${item.code},${item.time}\n`; });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `SO_${noSo}_Scans.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function sendToWhatsApp() {
             const noSo = document.getElementById('noSo').value.trim();
+            if (!noSo) return Swal.fire('Perhatian', 'Nomor SO masih kosong!', 'warning');
+            if (scannedData.length === 0) return Swal.fire('Perhatian', 'Belum ada data QR code!', 'warning');
 
-            if (!noSo) {
-                alert('Nomor SO masih kosong!');
-                document.getElementById('noSo').focus();
-                return;
-            }
+            // Simpan otomatis ke riwayat sebelum dikirim
+            saveToHistoryStorage();
 
-            if (scannedData.length === 0) {
-                alert('Belum ada data QR code yang di-scan!');
-                return;
-            }
-
-            let message = `No. SO: ${noSo}\n`;
-            scannedData.forEach((code) => {
-                message += `${code}\n`;
-            });
+            let message = `*Laporan Scan Gudang*\nNo. SO: *${noSo}*\nTotal Item: *${scannedData.length}*\n\n*Daftar Barcode:*\n`;
+            scannedData.forEach((item, i) => message += `${i + 1}. ${item.code}\n`);
 
             const encodedMessage = encodeURIComponent(message.trim());
             const phoneTarget = '628158830450';
@@ -376,17 +555,124 @@
 
             window.open(whatsappUrl, '_blank');
 
-            // Konfirmasi reset untuk SO berikutnya
-            setTimeout(() => {
-                if (confirm('Data berhasil dikirim ke WhatsApp. Ingin mengosongkan form untuk SO selanjutnya?')) {
+            Swal.fire({
+                title: 'Data Dikirim!',
+                text: "Data SO ini telah tersimpan di Catatan. Kosongkan form untuk SO selanjutnya?",
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Kosongkan Form',
+                cancelButtonText: 'Tetapkan Data'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     document.getElementById('noSo').value = '';
                     scannedData = [];
                     updateTable();
                     localStorage.removeItem('gudang_no_so');
                     localStorage.removeItem('gudang_scanned_data');
-                    document.getElementById('noSo').focus();
                 }
-            }, 500);
+            });
+        }
+
+        // UNTUK MODAL RIWAYAT / CATATAN SO
+        function openHistoryModal() {
+            renderHistory();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyListContainer');
+            const searchKeyword = document.getElementById('searchHistory').value.toLowerCase();
+            let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
+
+            container.innerHTML = '';
+
+            if (history.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-400 py-8 text-xs"><i class="fa-solid fa-folder-open text-2xl mb-2"></i><br>Belum ada catatan SO tersimpan.</p>`;
+                return;
+            }
+
+            const filtered = history.filter(h => h.noSo.toLowerCase().includes(searchKeyword));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-400 py-4 text-xs">Nomor SO tidak ditemukan.</p>`;
+                return;
+            }
+
+            filtered.forEach((h, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 p-3 rounded-xl shadow-sm hover:shadow-md transition";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <div>
+                            <span class="font-bold text-sm text-indigo-700">${h.noSo}</span>
+                            <p class="text-[10px] text-gray-400">${h.date}</p>
+                        </div>
+                        <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${h.total} Item</span>
+                    </div>
+                    <div class="flex gap-1.5 mt-2">
+                        <button onclick="restoreHistory('${h.noSo}')" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] py-1.5 rounded-lg border border-indigo-200 transition">
+                            <i class="fa-solid fa-folder-open mr-1"></i> Buka SO Ini
+                        </button>
+                        <button onclick="deleteHistoryItem(${h.id})" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function restoreHistory(noSoToRestore) {
+            let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
+            const record = history.find(h => h.noSo === noSoToRestore);
+
+            if (!record) return;
+
+            Swal.fire({
+                title: 'Muat Catatan SO Ini?',
+                text: "Data yang ada di layar utama saat ini akan digantikan oleh data SO terpilih.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Muat',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('noSo').value = record.noSo;
+                    scannedData = [...record.items];
+                    updateTable();
+                    saveDataState();
+                    closeHistoryModal();
+                    Swal.fire({ toast: true, position: 'top', icon: 'success', title: `SO ${record.noSo} Berhasil Dimuat`, showConfirmButton: false, timer: 1500 });
+                }
+            });
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem('gudang_history_data', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function clearAllHistory() {
+            Swal.fire({
+                title: 'Hapus Semua Catatan?',
+                text: "Semua riwayat SO yang tersimpan akan dihapus permanen!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Ya, Hapus Semua'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('gudang_history_data');
+                    renderHistory();
+                }
+            });
         }
     </script>
 </body>
