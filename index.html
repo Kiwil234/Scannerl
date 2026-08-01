@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner Gudang Rajawali</title>
+    <title>QR Scanner</title>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/825/825569.png" type="image/png">
+    <meta name="theme-color" content="#2563eb">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -43,7 +45,7 @@
         <!-- Header & Indikator Koneksi -->
         <div>
             <div class="flex justify-between items-center mb-1 px-1">
-                <span class="text-xs font-semibold text-gray-500">PT. Maravillosa Indah Pratama</span>
+                <span class="text-xs font-semibold text-gray-500">Gudang Rajawali 🦅</span>
                 <span id="connectionBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Online
                 </span>
@@ -51,10 +53,10 @@
             
             <div class="bg-gradient-to-r from-blue-700 to-indigo-600 text-white p-4 rounded-xl shadow-lg mb-4 text-center relative overflow-hidden">
                 <h1 class="text-xl font-bold tracking-wide flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-boxes-stacked"></i> QR Scanner Rajawali
+                    <i class="fa-solid fa-boxes-stacked"></i> QR Scanner Rajawali 🦅
                 </h1>
                 <div class="marquee-container mt-2 bg-blue-900/40 rounded py-1">
-                    <p class="text-xs text-blue-100 animate-marquee font-medium">Tetap Semangat! Teliti sebelum di-submit 🤸💪🤸💪</p>
+                    <p class="text-xs text-blue-100 animate-marquee font-medium">Tetap Semangat! Teliti sebelum di kirim 🤸💪🤸💪</p>
                 </div>
             </div>
         </div>
@@ -158,7 +160,7 @@
                 <i class="fa-solid fa-file-csv"></i> Export CSV
             </button>
             <button onclick="sendToWhatsApp()" class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm mt-1">
-                <i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke WhatsApp Admin
+                <i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke WhatsApp
             </button>
         </div>
 
@@ -192,6 +194,108 @@
 
     <!-- Script Logika Program -->
     <script>
+        const favicon = document.querySelector("link[rel='icon']") || (() => {
+    const link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+    return link;
+})();
+
+const canvas = document.createElement("canvas");
+canvas.width = 64;
+canvas.height = 64;
+const ctx = canvas.getContext("2d");
+
+let scanY = 8;
+let direction = 1;
+let blink = false;
+
+function square(x, y, s = 5) {
+    ctx.fillRect(x, y, s, s);
+}
+
+function drawFinder(x, y) {
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+
+    ctx.strokeRect(x, y, 14, 14);
+    ctx.fillRect(x + 4, y + 4, 6, 6);
+}
+
+function drawQR() {
+    ctx.fillStyle = "#000";
+
+    drawFinder(8, 8);
+    drawFinder(42, 8);
+    drawFinder(8, 42);
+
+    [
+        [28,18],[34,18],[28,24],[40,24],
+        [34,30],[22,36],[30,40],[40,36],
+        [50,30],[50,42],[28,50],[36,50]
+    ].forEach(([x,y]) => square(x,y));
+}
+
+function draw() {
+
+    // Background
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0,0,64,64);
+
+    // Border
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(2,2,60,60);
+
+    drawQR();
+
+    // Scan Line
+    ctx.beginPath();
+    ctx.moveTo(6, scanY);
+    ctx.lineTo(58, scanY);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#00ff55";
+    ctx.shadowColor = "#00ff55";
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Scan Glow
+    const gradient = ctx.createLinearGradient(0, scanY-6, 0, scanY+6);
+    gradient.addColorStop(0, "rgba(0,255,80,0)");
+    gradient.addColorStop(0.5, "rgba(0,255,80,0.35)");
+    gradient.addColorStop(1, "rgba(0,255,80,0)");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(6, scanY-6, 52, 12);
+
+    // Status Light
+    ctx.beginPath();
+    ctx.arc(56,56,5,0,Math.PI*2);
+    ctx.fillStyle = blink ? "#22c55e" : "#ef4444";
+    ctx.fill();
+
+    favicon.href = canvas.toDataURL("image/png");
+
+    // Animation
+    scanY += direction;
+
+    if(scanY >= 56 || scanY <= 8){
+        direction *= -1;
+    }
+
+    blink = !blink;
+}
+
+draw();
+setInterval(draw, 60);
+        const text = "QR Scanner🔴 QR Scanner🟢";
+        let i = 0;
+
+        setInterval(() => {
+            document.title = text.slice(i) + text.slice(0, i);
+            i = (i + 1) % text.length;
+        }, 150);
         let codeReader = null;
         let scannedData = []; // Array of object: { code: string, time: string }
         let isScanning = false;
@@ -513,8 +617,8 @@
             if (!noSo) return Swal.fire('Perhatian', 'Nomor SO masih kosong!', 'warning');
             if (scannedData.length === 0) return Swal.fire('Perhatian', 'Belum ada data QR code!', 'warning');
 
-            let textToCopy = `No. SO: ${noSo}\n`;
-            scannedData.forEach((item, i) => textToCopy += `${i+1}. ${item.code} (${item.time})\n`);
+            let textToCopy = `*${noSo}*\nTotal Item: *${scannedData.length}*\n`;
+            scannedData.forEach((item) => textToCopy += `${item.code}\n`);
 
             navigator.clipboard.writeText(textToCopy.trim()).then(() => {
                 Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Disalin ke Clipboard', showConfirmButton: false, timer: 1500 });
@@ -546,18 +650,19 @@
             // Simpan otomatis ke riwayat sebelum dikirim
             saveToHistoryStorage();
 
-            let message = `*Laporan Scan Gudang*\nNo. SO: *${noSo}*\nTotal Item: *${scannedData.length}*\n\n*Daftar Barcode:*\n`;
-            scannedData.forEach((item, i) => message += `${i + 1}. ${item.code}\n`);
+            let message = `No. SO: *${noSo}*\nTotal Item: *${scannedData.length}*\n`;
+            scannedData.forEach((item) => message += `${item.code}\n`);
 
             const encodedMessage = encodeURIComponent(message.trim());
-            const phoneTarget = '628158830450';
-            const whatsappUrl = `https://wa.me/${phoneTarget}?text=${encodedMessage}`;
+            
+            // MENGGUNAKAN API SEND WHATSAPP UMUM (Bisa pilih Grup)
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
 
             window.open(whatsappUrl, '_blank');
 
             Swal.fire({
-                title: 'Data Dikirim!',
-                text: "Data SO ini telah tersimpan di Catatan. Kosongkan form untuk SO selanjutnya?",
+                title: 'Data Disiapkan!',
+                text: "Pilih nomor WhatsApp tujuan Anda. Kosongkan form untuk SO selanjutnya?",
                 icon: 'success',
                 showCancelButton: true,
                 confirmButtonColor: '#10b981',
