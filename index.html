@@ -194,112 +194,149 @@
 
     <!-- Script Logika Program -->
     <script>
+        // FUNGSI ESCAPE HTML UNTUK MENCEGAH XSS
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // FAVICON ANIMATION LOGIC
         const favicon = document.querySelector("link[rel='icon']") || (() => {
-    const link = document.createElement("link");
-    link.rel = "icon";
-    document.head.appendChild(link);
-    return link;
-})();
+            const link = document.createElement("link");
+            link.rel = "icon";
+            document.head.appendChild(link);
+            return link;
+        })();
 
-const canvas = document.createElement("canvas");
-canvas.width = 64;
-canvas.height = 64;
-const ctx = canvas.getContext("2d");
+        const canvas = document.createElement("canvas");
+            canvas.width = 64;
+            canvas.height = 64;
+        const ctx = canvas.getContext("2d");
 
-let scanY = 8;
-let direction = 1;
-let blink = false;
+        let scanY = 8;
+        let direction = 1;
+        let blink = false;
+        let faviconInterval = null;
 
-function square(x, y, s = 5) {
-    ctx.fillRect(x, y, s, s);
-}
+        function square(x, y, s = 5) {
+            ctx.fillRect(x, y, s, s);
+        }
 
-function drawFinder(x, y) {
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
+        function drawFinder(x, y) {
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 14, 14);
+            ctx.fillRect(x + 4, y + 4, 6, 6);
+        }
 
-    ctx.strokeRect(x, y, 14, 14);
-    ctx.fillRect(x + 4, y + 4, 6, 6);
-}
+        function drawQR() {
+            ctx.fillStyle = "#000";
+            drawFinder(8, 8);
+            drawFinder(42, 8);
+            drawFinder(8, 42);
+            [
+                [28,18],[34,18],[28,24],[40,24],
+                [34,30],[22,36],[30,40],[40,36],
+                [50,30],[50,42],[28,50],[36,50]
+            ].forEach(([x,y]) => square(x,y));
+        }
 
-function drawQR() {
-    ctx.fillStyle = "#000";
+        function draw() {
+            // Background
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0,0,64,64);
 
-    drawFinder(8, 8);
-    drawFinder(42, 8);
-    drawFinder(8, 42);
+            // Border
+            ctx.strokeStyle = "#2563eb";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(2,2,60,60);
 
-    [
-        [28,18],[34,18],[28,24],[40,24],
-        [34,30],[22,36],[30,40],[40,36],
-        [50,30],[50,42],[28,50],[36,50]
-    ].forEach(([x,y]) => square(x,y));
-}
+            drawQR();
 
-function draw() {
+            // Scan Line
+            ctx.beginPath();
+            ctx.moveTo(6, scanY);
+            ctx.lineTo(58, scanY);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#00ff55";
+            ctx.shadowColor = "#00ff55";
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
 
-    // Background
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0,0,64,64);
+            // Scan Glow
+            const gradient = ctx.createLinearGradient(0, scanY-6, 0, scanY+6);
+            gradient.addColorStop(0, "rgba(0,255,80,0)");
+            gradient.addColorStop(0.5, "rgba(0,255,80,0.35)");
+            gradient.addColorStop(1, "rgba(0,255,80,0)");
 
-    // Border
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(2,2,60,60);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(6, scanY-6, 52, 12);
 
-    drawQR();
+            // Status Light
+            ctx.beginPath();
+            ctx.arc(56,56,5,0,Math.PI*2);
+            ctx.fillStyle = blink ? "#22c55e" : "#ef4444";
+            ctx.fill();
 
-    // Scan Line
-    ctx.beginPath();
-    ctx.moveTo(6, scanY);
-    ctx.lineTo(58, scanY);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#00ff55";
-    ctx.shadowColor = "#00ff55";
-    ctx.shadowBlur = 10;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+            favicon.href = canvas.toDataURL("image/png");
 
-    // Scan Glow
-    const gradient = ctx.createLinearGradient(0, scanY-6, 0, scanY+6);
-    gradient.addColorStop(0, "rgba(0,255,80,0)");
-    gradient.addColorStop(0.5, "rgba(0,255,80,0.35)");
-    gradient.addColorStop(1, "rgba(0,255,80,0)");
+            // Animation
+            scanY += direction;
+            if(scanY >= 56 || scanY <= 8){
+                direction *= -1;
+            }
+            blink = !blink;
+        }
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(6, scanY-6, 52, 12);
+        // Gambar favicon statis pada awalnya
+        draw(); 
 
-    // Status Light
-    ctx.beginPath();
-    ctx.arc(56,56,5,0,Math.PI*2);
-    ctx.fillStyle = blink ? "#22c55e" : "#ef4444";
-    ctx.fill();
+        function startFaviconAnimation() {
+            if (!faviconInterval) {
+                faviconInterval = setInterval(draw, 60);
+            }
+        }
 
-    favicon.href = canvas.toDataURL("image/png");
+        function stopFaviconAnimation() {
+            if (faviconInterval) {
+                clearInterval(faviconInterval);
+                faviconInterval = null;
+            }
+        }
 
-    // Animation
-    scanY += direction;
-
-    if(scanY >= 56 || scanY <= 8){
-        direction *= -1;
-    }
-
-    blink = !blink;
-}
-
-draw();
-setInterval(draw, 60);
-        const text = "QR Scanner🔴 QR Scanner🟢";
+        // TITLE ANIMATION (Diperlambat)
+        const text = "QR Scanner🔴 QR Scanner🟢 ";
         let i = 0;
-
         setInterval(() => {
             document.title = text.slice(i) + text.slice(0, i);
             i = (i + 1) % text.length;
-        }, 150);
+        }, 1000); 
+
+        // GLOBAL VARIABLES
         let codeReader = null;
-        let scannedData = []; // Array of object: { code: string, time: string }
+        let scannedData = []; 
         let isScanning = false;
         let isTorchOn = false;
+        
+        // AUDIO CONTEXT (Reuse untuk mencegah Memory Leak)
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
 
         const btnToggleCamera = document.getElementById('btnToggleCamera');
         const videoElement = document.getElementById('video');
@@ -329,7 +366,6 @@ setInterval(draw, 60);
             if (savedScans) {
                 try {
                     const parsed = JSON.parse(savedScans);
-                    // Format terlama compatibility (jika sebelumnya simpan string murni)
                     scannedData = parsed.map(item => typeof item === 'string' ? { code: item, time: 'Restored' } : item);
                     updateTable();
                 } catch(e) {}
@@ -337,9 +373,15 @@ setInterval(draw, 60);
         });
 
         function saveDataState() {
-            const noSo = document.getElementById('noSo').value.trim();
-            localStorage.setItem('gudang_no_so', noSo);
-            localStorage.setItem('gudang_scanned_data', JSON.stringify(scannedData));
+            try {
+                const noSo = document.getElementById('noSo').value.trim();
+                localStorage.setItem('gudang_no_so', noSo);
+                localStorage.setItem('gudang_scanned_data', JSON.stringify(scannedData));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'Memori Penuh! Hapus riwayat lama.', showConfirmButton: false, timer: 3000 });
+                }
+            }
         }
 
         function triggerVisualFlash() {
@@ -350,7 +392,7 @@ setInterval(draw, 60);
 
         function playSuccessBeep() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (!audioCtx) return;
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 oscillator.type = 'sine';
@@ -360,12 +402,12 @@ setInterval(draw, 60);
                 gainNode.connect(audioCtx.destination);
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.15);
-            } catch (e) {}
+            } catch (e) { console.error("Audio error:", e); }
         }
 
         function playDuplicateAlert() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (!audioCtx) return;
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 oscillator.type = 'sawtooth';
@@ -376,7 +418,7 @@ setInterval(draw, 60);
                 gainNode.connect(audioCtx.destination);
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.25);
-            } catch (e) {}
+            } catch (e) { console.error("Audio error:", e); }
         }
 
         // FUNGSI SENTER (TORCH)
@@ -412,6 +454,7 @@ setInterval(draw, 60);
         }
 
         btnToggleCamera.addEventListener('click', () => {
+            initAudio(); // Inisialisasi Audio saat interaksi pertama
             const noSo = document.getElementById('noSo').value.trim();
             if (!noSo) {
                 Swal.fire({ icon: 'warning', title: 'No SO Kosong', text: 'Harap isi Nomor SO terlebih dahulu!' });
@@ -426,6 +469,8 @@ setInterval(draw, 60);
             codeReader = new ZXing.BrowserQRCodeReader();
             cameraPlaceholder.style.display = 'none';
             isScanning = true;
+            startFaviconAnimation(); // Mulai Animasi Favicon
+
             btnToggleCamera.innerHTML = '<i class="fa-solid fa-stop"></i> Matikan';
             btnToggleCamera.classList.replace('bg-green-600', 'bg-red-600');
             btnToggleCamera.classList.replace('hover:bg-green-700', 'hover:bg-red-700');
@@ -433,19 +478,65 @@ setInterval(draw, 60);
             try {
                 const videoInputDevices = await codeReader.listVideoInputDevices();
                 let selectedDeviceId = videoInputDevices[0]?.deviceId;
-                for (let device of videoInputDevices) {
-                    if (/back|rear|environment/i.test(device.label)) {
-                        selectedDeviceId = device.deviceId;
-                        break;
-                    }
+                
+                // Prioritaskan kamera utama (Main Camera). Seringkali HP punya banyak lensa (wide/macro/depth).
+                let backCameras = videoInputDevices.filter(device => /back|rear|environment/i.test(device.label));
+                if (backCameras.length > 0) {
+                    // Ambil kamera belakang pertama (biasanya merupakan lensa utama/standar)
+                    selectedDeviceId = backCameras[0].deviceId;
                 }
 
-                codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+                // 1. OPTIMALISASI RESOLUSI: Paksa kamera menggunakan mode HD/Full HD
+                const constraints = {
+                    video: {
+                        deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+                        width: { min: 1280, ideal: 1920, max: 2560 }, // Memaksa resolusi tinggi (tidak buram)
+                        height: { min: 720, ideal: 1080, max: 1440 },
+                        facingMode: "environment"
+                    }
+                };
+
+                // Mulai memindai dengan constraint resolusi tinggi
+                codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
                     if (result) processScannedCode(result.text);
                 });
+
+                // 2. STABILIZER & AUTO-FOCUS (Berjalan di latar belakang)
+                setTimeout(async () => {
+                    try {
+                        const videoElement = document.getElementById('video');
+                        if (videoElement.srcObject) {
+                            const track = videoElement.srcObject.getVideoTracks()[0];
+                            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+                            const advancedOpts = {};
+
+                            // A. Paksa Auto-Fokus terus-menerus (Continuous Autofocus)
+                            if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+                                advancedOpts.focusMode = "continuous";
+                            }
+
+                            // B. Terapkan Zoom Otomatis (Stabilizer Jarak)
+                            // Membuat HP men-zoom sedikit (2x), sehingga user memegang HP agak menjauh. 
+                            // Jarak yang jauh (15-25cm) = Kamera sangat mudah fokus secara optikal!
+                            if (capabilities.zoom) {
+                                const minZoom = capabilities.zoom.min || 1;
+                                const maxZoom = capabilities.zoom.max || 2;
+                                advancedOpts.zoom = Math.min(2.0, maxZoom); // Terapkan max 2.0x zoom
+                            }
+
+                            // Eksekusi peningkatan kualitas lensa
+                            if (Object.keys(advancedOpts).length > 0) {
+                                await track.applyConstraints({ advanced: [advancedOpts] });
+                            }
+                        }
+                    } catch (e) {
+                        console.log("Info: Browser atau HP ini tidak mengizinkan bypass Auto-Fokus/Zoom secara manual via web.", e);
+                    }
+                }, 1200); // Tunggu 1,2 detik agar aliran kamera (stream) stabil sebelum memodifikasi lensa
+
             } catch (err) {
                 console.error(err);
-                Swal.fire({ icon: 'error', title: 'Kamera Gagal', text: 'Akses kamera gagal. Gunakan input manual atau upload foto.' });
+                Swal.fire({ icon: 'error', title: 'Kamera Gagal', text: 'Akses kamera ditolak atau spesifikasi kamera tidak mencukupi.' });
                 stopScanner();
             }
         }
@@ -454,6 +545,8 @@ setInterval(draw, 60);
             if (codeReader) codeReader.reset();
             isScanning = false;
             isTorchOn = false;
+            stopFaviconAnimation(); // Hentikan Animasi Favicon
+
             cameraPlaceholder.style.display = 'block';
             btnToggleCamera.innerHTML = '<i class="fa-solid fa-play"></i> Mulai';
             btnToggleCamera.classList.replace('bg-red-600', 'bg-green-600');
@@ -488,8 +581,9 @@ setInterval(draw, 60);
             if (navigator.vibrate) navigator.vibrate(100);
         }
 
-        // SCAN DARI GORIS / GALERI (SOLUSI JIKA RUANGAN GELAP)
+        // SCAN DARI GORIS / GALERI
         async function scanImageFile(event) {
+            initAudio(); // Pastikan audio siap
             const file = event.target.files[0];
             if (!file) return;
 
@@ -519,6 +613,7 @@ setInterval(draw, 60);
         }
 
         function addManualBarcode() {
+            initAudio(); // Pastikan audio siap
             const inputField = document.getElementById('manualInput');
             const code = inputField.value.trim();
             if (!code) return;
@@ -534,30 +629,35 @@ setInterval(draw, 60);
             saveDataState();
         }
 
-        // SIMPAN KE CATATAN BILA RESET ATAU SUBMIT
+        // SIMPAN KE CATATAN (DENGAN TRY-CATCH)
         function saveToHistoryStorage() {
             const noSo = document.getElementById('noSo').value.trim();
             if (!noSo || scannedData.length === 0) return;
 
-            let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
-            
-            const record = {
-                id: Date.now(),
-                noSo: noSo,
-                date: new Date().toLocaleString('id-ID'),
-                total: scannedData.length,
-                items: [...scannedData]
-            };
+            try {
+                let history = JSON.parse(localStorage.getItem('gudang_history_data') || '[]');
+                
+                const record = {
+                    id: Date.now(),
+                    noSo: noSo,
+                    date: new Date().toLocaleString('id-ID'),
+                    total: scannedData.length,
+                    items: [...scannedData]
+                };
 
-            // Jika SO yang sama sudah ada di riwayat, perbarui
-            const existingIndex = history.findIndex(h => h.noSo === noSo);
-            if (existingIndex >= 0) {
-                history[existingIndex] = record;
-            } else {
-                history.unshift(record); // Tambah paling atas
+                const existingIndex = history.findIndex(h => h.noSo === noSo);
+                if (existingIndex >= 0) {
+                    history[existingIndex] = record;
+                } else {
+                    history.unshift(record); 
+                }
+
+                localStorage.setItem('gudang_history_data', JSON.stringify(history));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    Swal.fire('Memori Penuh!', 'Tidak dapat menyimpan riwayat. Harap hapus "Catatan SO" lama.', 'error');
+                }
             }
-
-            localStorage.setItem('gudang_history_data', JSON.stringify(history));
         }
 
         function clearScans() {
@@ -582,6 +682,7 @@ setInterval(draw, 60);
             });
         }
 
+        // TABEL RENDER (DENGAN PERLINDUNGAN XSS)
         function updateTable() {
             const tbody = document.getElementById('scanTableBody');
             const countScan = document.getElementById('countScan');
@@ -598,9 +699,11 @@ setInterval(draw, 60);
                 const index = scannedData.length - 1 - revIndex;
                 const row = document.createElement('tr');
                 row.className = 'border-b hover:bg-blue-50 transition';
+                
+                // MENGGUNAKAN FUNGSI escapeHTML() UNTUK MENCEGAH SCRIPT INJECTION
                 row.innerHTML = `
                     <td class="p-2 text-center font-semibold text-gray-500">${index + 1}</td>
-                    <td class="p-2 font-mono font-bold text-blue-700">${item.code}</td>
+                    <td class="p-2 font-mono font-bold text-blue-700">${escapeHTML(item.code)}</td>
                     <td class="p-2 text-center text-[10px] text-gray-400 font-mono">${item.time}</td>
                     <td class="p-2 text-center">
                         <button onclick="removeScan(${index})" class="text-red-500 hover:text-red-700 bg-red-100 p-1 rounded transition">
@@ -647,15 +750,12 @@ setInterval(draw, 60);
             if (!noSo) return Swal.fire('Perhatian', 'Nomor SO masih kosong!', 'warning');
             if (scannedData.length === 0) return Swal.fire('Perhatian', 'Belum ada data QR code!', 'warning');
 
-            // Simpan otomatis ke riwayat sebelum dikirim
             saveToHistoryStorage();
 
             let message = `No. SO: *${noSo}*\nTotal Item: *${scannedData.length}*\n`;
             scannedData.forEach((item) => message += `${item.code}\n`);
 
             const encodedMessage = encodeURIComponent(message.trim());
-            
-            // MENGGUNAKAN API SEND WHATSAPP UMUM (Bisa pilih Grup)
             const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
 
             window.open(whatsappUrl, '_blank');
@@ -711,16 +811,18 @@ setInterval(draw, 60);
             filtered.forEach((h, index) => {
                 const card = document.createElement('div');
                 card.className = "bg-white border border-gray-200 p-3 rounded-xl shadow-sm hover:shadow-md transition";
+                
+                // PENGGUNAAN escapeHTML() UNTUK NO SO (Mencegah XSS melalui input Nomor SO)
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-1">
                         <div>
-                            <span class="font-bold text-sm text-indigo-700">${h.noSo}</span>
+                            <span class="font-bold text-sm text-indigo-700">${escapeHTML(h.noSo)}</span>
                             <p class="text-[10px] text-gray-400">${h.date}</p>
                         </div>
                         <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${h.total} Item</span>
                     </div>
                     <div class="flex gap-1.5 mt-2">
-                        <button onclick="restoreHistory('${h.noSo}')" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] py-1.5 rounded-lg border border-indigo-200 transition">
+                        <button onclick="restoreHistory('${escapeHTML(h.noSo)}')" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] py-1.5 rounded-lg border border-indigo-200 transition">
                             <i class="fa-solid fa-folder-open mr-1"></i> Buka SO Ini
                         </button>
                         <button onclick="deleteHistoryItem(${h.id})" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 transition">
